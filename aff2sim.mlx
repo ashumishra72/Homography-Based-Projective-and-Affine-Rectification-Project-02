@@ -1,0 +1,94 @@
+%function proj2affine
+fim= 'IMG_0545.jpeg'; %'IMG_6742.jpeg'; %'2.jpg';  %'4.jpg';  % '5.jpg'; %'GRID.JPG'; 
+im=imread(fim); 
+[Nr,Nc,N]= size(im);
+if N>1 
+    im=rgb2gray(im(:,:,1:min(3,N)));
+end
+subplot(1,2,1)
+imshow(1.6*im); hold on;
+f=1;
+
+%%%%%%%%%%%%%%%%%%%%%%
+% User click input 
+% Or load saved clicks
+%%%%%%%%%%%%%%%%%%%%%%
+% ===== FIXED VERSION - JUST COPY THIS =====
+click = 1;           % Keep = 1 (ENABLE clicking)
+select = 1;          % **CHANGE TO 1** = FORCE NEW CLICKS! 👈
+
+if click == 1        % Fixed: use == instead of comma
+    if select == 1   % New clicks mode
+        p = [];      % Fixed: proper initialization
+        f = 1;       % Add missing f variable
+        colr = ['r','b'];
+        
+        % ===== YOUR 4 CLICKS HAPPEN HERE =====
+        for i = 1:4
+            [x, y, b] = ginput(1); 
+            if b ~= 1, return; end
+            plot(x, y, '+', 'Color', colr(1+mod(i,2)), 'MarkerSize', 15);
+            x = x/f; y = y/f;
+            p = [p, [x; y; 1]];  % Fixed: proper matrix building
+        end
+        
+        % Save points (fixed variable name)
+        save('Points1New.mat', 'p');  % Fixed: added variable name
+        
+    else  % Load saved points
+        if strcmp(fim, 'Miami03.jpeg')  % Fixed: use strcmp for strings
+            load('POints1.mat', 'p');
+        else
+            load('POin ts2.mat', 'p');
+        end
+    end
+    
+    % Plot points with numbers
+    for k = 1:4
+        plot(p(1,k), p(2,k), 'ro', 'MarkerSize', 15, 'LineWidth', 3);
+        text(p(1,k), p(2,k)-20, num2str(k), 'Color', 'r', 'FontSize', 25, 'FontWeight', 'bold');
+    end
+    
+    % ===== COMPUTE LINES (YOUR CODE - FIXED) =====
+    p1 = p(:,1); p2 = p(:,2); p3 = p(:,3); p4 = p(:,4);
+    l21 = cross(p2,p1); l21 = l21'/l21(3);
+    l43 = cross(p4,p3); l43 = l43'/l43(3);
+    l32 = cross(p3,p2); l32 = l32'/l32(3);
+    l41 = cross(p4,p1); l41 = l41'/l41(3);
+    
+    % Draw lines
+    hline(l21,'r');
+    hline(l43,'r');
+    hline(l32,'r');
+    hline(l41,'r');
+    
+    % Vanishing points
+    van1 = cross(l21,l43);
+    van2 = cross(l32,l41);
+    
+else  % Manual vanishing points
+    [xo,yo] = ginput(2);
+    van1 = [xo(1)/f; yo(1)/f; 1];
+    van2 = [xo(2)/f; yo(2)/f; 1];
+end
+
+% Vanishing line
+l = cross(van1,van2);
+l = l/l(3);
+
+% Homography
+H = [1 0 0;
+     0 1 0;
+     l'];
+
+% Result
+[om, nT] = imTrans(im, H);
+subplot(1,2,2)
+imshow(om); hold on;
+pp = inv(nT)*H*p;
+plot(pp(1,1:4)./pp(3,1:4), pp(2,1:4)./pp(3,1:4), 'r+', 'MarkerSize', 15);
+ll21 = (inv(inv(nT)*H))'*l21'; hline(ll21,'r');
+ll43 = (inv(inv(nT)*H))'*l43'; hline(ll43,'r');
+ll32 = (inv(inv(nT)*H))'*l32'; hline(ll32,'r');
+ll41 = (inv(inv(nT)*H))'*l41'; hline(ll41,'r');
+hold off;
